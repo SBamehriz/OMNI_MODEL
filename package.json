@@ -1,0 +1,17 @@
+{
+  "name": "omni-model-router",
+  "private": true,
+  "scripts": {
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:dashboard": "npm run dev --workspace=apps/dashboard",
+    "build:api": "npm run build --workspace=apps/api",
+    "build:dashboard": "npm run build --workspace=apps/dashboard",
+    "build": "npm run build:api && npm run build:dashboard",
+    "start:api": "npm run start --workspace=apps/api"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/dashboard",
+    "packages/shared"
+  ]
+}
