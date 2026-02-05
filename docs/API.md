@@ -10,6 +10,7 @@ All endpoints require an API key.
 
 - **Header:** `Authorization: Bearer <api_key>` or `X-API-Key: <api_key>`
 - Invalid or missing key → `401` with error body below.
+- Rate limiting uses `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SEC` when configured. Responses may include `x-ratelimit-limit`, `x-ratelimit-remaining`, `x-ratelimit-reset`.
 
 ---
 
@@ -27,7 +28,7 @@ All errors use this structure:
 }
 ```
 
-Common codes: `invalid_api_key`, `rate_limited`, `invalid_request`, `provider_error`, `internal_error`.  
+Common codes: `invalid_api_key`, `rate_limited`, `invalid_request`, `max_cost_exceeded`, `provider_error`, `internal_error`.  
 **Rate limits:** Placeholder e.g. 100 requests per minute per org; response `429` with same error shape.
 
 ---
@@ -47,7 +48,7 @@ Main routing endpoint. Sends the conversation to the router; the router selects 
 | `messages` | array | Yes | Chat messages (e.g. `{ "role": "user" \| "assistant" \| "system", "content": "..." }`) |
 | `priority` | string | No | `"cheap"` \| `"balanced"` \| `"best"`. Default `"balanced"`. |
 | `latency_pref` | string | No | `"fast"` \| `"normal"`. Default `"normal"`. |
-| `max_cost` | number | No | Max allowed cost for this request (e.g. 0.02). |
+| `max_cost` | number | No | Max allowed cost for this request (e.g. 0.02). If no model fits, returns `400` with `max_cost_exceeded`. |
 
 Example:
 
@@ -71,6 +72,7 @@ Example:
 | `cost` | number | Actual cost for this request. |
 | `latency_ms` | number | Round-trip latency in milliseconds. |
 | `savings_estimate` | number | Estimated savings vs using a default premium model. |
+| `request_id` | string | Request identifier for tracing/logs. |
 
 Example:
 
@@ -80,7 +82,8 @@ Example:
   "model_used": "gpt-4o-mini",
   "cost": 0.003,
   "latency_ms": 420,
-  "savings_estimate": 0.02
+  "savings_estimate": 0.02,
+  "request_id": "req_123"
 }
 ```
 
@@ -88,7 +91,7 @@ Example:
 
 ## POST `/v1/agent-step`
 
-Used for AI agent workflows. Same idea as `/v1/chat`: one endpoint, router picks the model for this step. Request/response can mirror `/v1/chat` (e.g. `messages`, optional `priority`, `latency_pref`, `max_cost`; response `output`, `model_used`, `cost`, `latency_ms`, `savings_estimate`). Exact fields may be extended for agent-specific metadata (e.g. step id) without changing the core contract.
+Used for AI agent workflows. Same idea as `/v1/chat`: one endpoint, router picks the model for this step. Request/response can mirror `/v1/chat` (e.g. `messages`, optional `priority`, `latency_pref`, `max_cost`; response `output`, `model_used`, `cost`, `latency_ms`, `savings_estimate`, `request_id`). Exact fields may be extended for agent-specific metadata (e.g. step id) without changing the core contract.
 
 ---
 
@@ -98,7 +101,7 @@ Returns cost and usage stats for the authenticated org (or user).
 
 **Query (optional):** `from`, `to` (ISO dates) to scope the period.
 
-**Response (200):** e.g. `total_requests`, `total_cost`, `estimated_savings`, `by_model` (array of model + count + cost). Exact fields TBD; dashboard consumes this.
+**Response (200):** e.g. `total_requests`, `total_cost`, `estimated_savings`, `total_tokens`, `total_tokens_input`, `total_tokens_output`, `by_day` (array of date + requests + cost + savings), `by_model` (array of model + count + cost).
 
 ---
 
@@ -116,4 +119,4 @@ Explains how the router would (or did) choose a model for a given request. Used 
 
 **Body:** Same as `/v1/chat` (e.g. `messages`, optional `priority`, `latency_pref`, `max_cost`).
 
-**Response (200):** e.g. `task_type`, `considered_models` (list with scores or reasons), `selected_model`, `reason`. No actual call to a provider required; can be purely deterministic from request + registry.
+**Response (200):** e.g. `task_type`, `considered_models` (list with scores or reasons), `selected_model`, `reason`, `request_id`. No actual call to a provider required; can be purely deterministic from request + registry.

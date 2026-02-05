@@ -5,4 +5,5 @@ export type ChatResponse = {
   cost: number;
   latency_ms: number;
   savings_estimate: number;
+  request_id?: string;
 };

@@ -1,6 +1,6 @@
 import { supabase } from '../lib/db.js';
 
-type Req = { log?: { warn: (o: object, s: string) => void } };
+type Req = { request_id?: string; log?: { warn: (o: object, s: string) => void } };
 type Rep = { status: (c: number) => Rep; send: (b: unknown) => Rep };
 
 export async function modelsRoutes(app: { get: (path: string, h: (req: Req, reply: Rep) => Promise<Rep | void>) => void }) {
@@ -13,7 +13,7 @@ export async function modelsRoutes(app: { get: (path: string, h: (req: Req, repl
       req.log?.warn({ err: error }, 'Models query failed');
       return reply.status(500).send({
         error: { code: 'internal_error', message: 'Failed to fetch models' },
-        request_id: undefined,
+        request_id: req.request_id,
       });
     }
 

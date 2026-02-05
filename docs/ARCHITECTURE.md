@@ -46,7 +46,7 @@ flowchart LR
 
 **Client (App)** — Any caller (app, agent, or tool) that sends requests to the router. Uses a single API endpoint; no provider-specific integration.
 
-**API Gateway** — Entry point for the Omni Router. Authenticates the request (API key), validates payload, and forwards to the Task Analyzer. Returns the final response to the client and handles errors and rate limits.
+**API Gateway** — Entry point for the Omni Router. Authenticates the request (API key), validates payload, applies rate limits, and forwards to the Task Analyzer. Returns the final response to the client with a `request_id` and handles errors.
 
 **Task Analyzer** — Classifies each request (e.g. chat, coding, reasoning, summarization, translation, image, agent_step) using a lightweight model or heuristic. Output is used by the Routing Engine to pick the best model.
 
@@ -58,6 +58,6 @@ flowchart LR
 
 **Database (Supabase)** — Stores users/orgs, API keys, model registry, request logs, and routing logs. Source of truth for usage and cost.
 
-**Redis (Upstash)** — Optional cache for model registry or rate-limit counters to keep routing fast.
+**Redis (Upstash)** — Cache for model registry or rate-limit counters to keep routing fast.
 
 **Dashboard (Next.js UI)** — Reads from the database to show overview, usage over time, model breakdown, and savings. No direct coupling to the router API beyond shared DB.

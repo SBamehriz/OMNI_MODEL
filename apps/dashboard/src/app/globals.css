@@ -3,11 +3,87 @@
 @tailwind utilities;
 
 :root {
-  --background: #0f0f0f;
-  --foreground: #e5e5e5;
+  --bg: #f7f4ee;
+  --ink: #1b1a17;
+  --muted: #6d6256;
+  --accent: #ff5b2e;
+  --accent-2: #1f7a6d;
+  --card: #fffaf2;
+  --line: #e7dfd2;
+  --shadow: rgba(27, 26, 23, 0.08);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 153, 102, 0.22), transparent 48%),
+    radial-gradient(circle at 85% 15%, rgba(31, 122, 109, 0.18), transparent 42%),
+    radial-gradient(circle at 30% 85%, rgba(255, 91, 46, 0.12), transparent 55%),
+    var(--bg);
+  color: var(--ink);
+}
+
+.noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 60px var(--shadow);
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: #fff5e6;
+}
+
+.ink-muted {
+  color: var(--muted);
+}
+
+.ink-accent {
+  color: var(--accent);
+}
+
+.ink-accent-2 {
+  color: var(--accent-2);
+}
+
+.headline {
+  font-family: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.mono {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.grid-lines {
+  background-image: linear-gradient(to right, rgba(27, 26, 23, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(27, 26, 23, 0.05) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  animation: rise 0.6s ease-out both;
 }

@@ -38,9 +38,9 @@ OMNI MODEL/
 
 ## How to run
 
-1. **Database:** Create a Supabase project and run the SQL in `supabase/migrations/` (001 then 002) in the SQL editor.
-2. **API:** From repo root, `npm install` then `cd apps/api`, copy `.env.example` to `.env`, set `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `OPENAI_API_KEY`. Run `npm run dev` (or from root: `npm run dev:api`). API listens on port 3000.
-3. **Dashboard:** In `apps/dashboard`, copy `.env.example` to `.env.local`, set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY` (use the dev key from seed: `omni-dev-key-change-in-production`). Run `npm run dev` (or from root: `npm run dev:dashboard`). Dashboard runs on port 3001.
+1. [ ] **Database:** Create a Supabase project and run the SQL in `supabase/migrations/` (001, 002, then 003) in the SQL editor.
+2. [ ] **API:** From repo root, `npm install` then `cd apps/api`, copy `.env.example` to `.env`, set `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and at least one provider key (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` / `GROQ_API_KEY`). Optional: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_SEC` for rate limiting. Run `npm run dev` (or from root: `npm run dev:api`). API listens on port 3000.
+3. [ ] **Dashboard:** In `apps/dashboard`, copy `.env.example` to `.env.local`, set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY` (use the dev key from seed: `omni-dev-key-change-in-production`). Run `npm run dev` (or from root: `npm run dev:dashboard`). Dashboard runs on port 3001.
 
 ---
 
@@ -48,6 +48,6 @@ OMNI MODEL/
 
 If you are an AI or human agent building this product:
 
-1. Read **[docs/AGENTS.md](docs/AGENTS.md)** for build order and conventions.
-2. Use **[plan.md](plan.md)** for MVP scope, schema, and API contracts.
-3. Use **[docs/API.md](docs/API.md)** for request/response contracts.
+1. [x] Read **[docs/AGENTS.md](docs/AGENTS.md)** for build order and conventions.
+2. [x] Use **[plan.md](plan.md)** for MVP scope, schema, and API contracts.
+3. [x] Use **[docs/API.md](docs/API.md)** for request/response contracts.

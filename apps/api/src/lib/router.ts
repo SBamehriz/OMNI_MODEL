@@ -1,5 +1,6 @@
 import { supabase } from './db.js';
 import type { TaskType } from './taskClassifier.js';
+import type { TokenEstimate } from './tokens.js';
 
 export type ModelRow = {
   id: string;
@@ -17,6 +18,12 @@ export type RoutingDecision = {
   reason: string;
 };
 
+function estimateCostForModel(model: ModelRow, tokens: TokenEstimate): number {
+  const inCost = Number(model.cost_input);
+  const outCost = Number(model.cost_output);
+  return (tokens.inputTokens / 1000) * inCost + (tokens.outputTokens / 1000) * outCost;
+}
+
 /**
  * Rule-based router: pick model by task + priority + latency_pref.
  * Returns ordered list [primary, backup, ...] for fallback.
@@ -24,7 +31,8 @@ export type RoutingDecision = {
 export async function selectModels(
   taskType: TaskType,
   priority: 'cheap' | 'balanced' | 'best',
-  latencyPref: 'fast' | 'normal'
+  latencyPref: 'fast' | 'normal',
+  options?: { maxCost?: number; tokenEstimate?: TokenEstimate; availableProviders?: string[] }
 ): Promise<ModelRow[]> {
   const { data: rows, error } = await supabase
     .from('models')
@@ -32,6 +40,10 @@ export async function selectModels(
     .order('cost_input', { ascending: priority === 'cheap' });
 
   if (error || !rows?.length) return [];
+
+  const providerFiltered = options?.availableProviders?.length
+    ? rows.filter((r) => options.availableProviders?.includes(r.provider))
+    : rows;
 
   const withStrength = (r: (typeof rows)[0]) => {
     const strengths = (r.strengths as string[]) ?? [];
@@ -42,7 +54,12 @@ export async function selectModels(
     return { ...r, score, strengths };
   };
 
-  const scored = rows.map(withStrength).sort((a, b) => b.score - a.score);
+  let scored = providerFiltered.map(withStrength).sort((a, b) => b.score - a.score);
+  const maxCost = options?.maxCost;
+  const tokenEstimate = options?.tokenEstimate;
+  if (maxCost !== undefined && tokenEstimate) {
+    scored = scored.filter((r) => estimateCostForModel(r as ModelRow, tokenEstimate) <= maxCost);
+  }
   const primary = scored[0];
   const fallbacks = scored.slice(1);
 
