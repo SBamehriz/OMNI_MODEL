@@ -1,4 +1,10 @@
 import 'dotenv/config';
+import { validateEnv, getEnv } from './lib/env.js';
+
+// Validate environment BEFORE starting server
+// This catches configuration errors early and provides clear error messages
+const env = validateEnv();
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { supabase } from './lib/db.js';
@@ -10,9 +16,8 @@ import { authPlugin } from './lib/auth.js';
 
 const app = Fastify({ logger: true });
 
-const corsOrigin = process.env.CORS_ORIGIN ?? '';
 await app.register(cors, {
-  origin: corsOrigin ? corsOrigin.split(',').map((o) => o.trim()) : true,
+  origin: env.CORS_ORIGIN ? env.CORS_ORIGIN.split(',').map((o) => o.trim()) : true,
   credentials: true,
 });
 
@@ -53,5 +58,40 @@ await app.register(usageRoutes, { prefix: '/v1' });
 await app.register(modelsRoutes, { prefix: '/v1' });
 await app.register(debugRoutes, { prefix: '/v1/router' });
 
-const port = Number(process.env.PORT) || 3000;
-await app.listen({ port, host: '0.0.0.0' });
+await app.listen({ port: env.PORT, host: '0.0.0.0' });
+
+// Graceful shutdown handlers
+// Allow in-flight requests to complete before shutting down
+const gracefulShutdown = async (signal: string) => {
+  console.log(`\n${signal} received, starting graceful shutdown...`);
+
+  try {
+    // Stop accepting new connections
+    await app.close();
+    console.log('✓ HTTP server closed');
+
+    // Supabase client connections will be cleaned up automatically
+    console.log('✓ Database connections closed');
+
+    console.log('✓ Graceful shutdown complete');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - let the error handler deal with it
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
+});

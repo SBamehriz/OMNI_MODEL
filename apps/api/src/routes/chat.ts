@@ -4,6 +4,8 @@ import { selectModels, getRoutingDecision, type ModelRow } from '../lib/router.j
 import { estimateTokensFromMessages } from '../lib/tokens.js';
 import { chatWithProvider, costForModel, premiumEstimate, savingsEstimate } from '../lib/providers.js';
 import { supabase } from '../lib/db.js';
+import { ChatRequestSchema, type ChatRequest } from '../lib/schemas.js';
+import { validateBody } from '../lib/validation.js';
 
 const DEFAULT_MODEL = 'gpt-4o-mini';
 
@@ -57,34 +59,7 @@ function queueRequestLog(input: RequestLogInput, log?: { error: (o: object, s: s
   });
 }
 
-type ChatBody = {
-  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
-  priority?: 'cheap' | 'balanced' | 'best';
-  latency_pref?: 'fast' | 'normal';
-  max_cost?: number;
-};
-
-function isValidMessages(
-  messages: unknown
-): messages is Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
-  if (!Array.isArray(messages) || messages.length === 0) return false;
-  return messages.every(
-    (m) =>
-      m &&
-      typeof m === 'object' &&
-      (m as { role?: string }).role &&
-      (m as { content?: string }).content &&
-      ['user', 'assistant', 'system'].includes((m as { role?: string }).role as string)
-  );
-}
-
-function isValidPriority(value: unknown): value is 'cheap' | 'balanced' | 'best' {
-  return value === undefined || value === 'cheap' || value === 'balanced' || value === 'best';
-}
-
-function isValidLatency(value: unknown): value is 'fast' | 'normal' {
-  return value === undefined || value === 'fast' || value === 'normal';
-}
+// Manual validation functions replaced with Zod schemas (see ../lib/schemas.ts)
 
 async function tryChat(
   models: ModelRow[],
@@ -103,7 +78,7 @@ async function tryChat(
 
 type Req = {
   context: { org_id: string; user_id: string };
-  body?: ChatBody;
+  body?: ChatRequest;
   request_id?: string;
   log?: { error: (o: object, s: string) => void };
 };
@@ -112,32 +87,24 @@ type Rep = { status: (c: number) => Rep; send: (b: unknown) => Rep };
 export async function chatRoutes(app: { post: (path: string, h: (req: Req, reply: Rep) => Promise<Rep | void>) => void }) {
   app.post('/chat', async (req: Req, reply: Rep) => {
     const ctx = req.context;
-    const { messages, priority = 'balanced', latency_pref = 'normal', max_cost } = req.body ?? {};
 
-    if (!isValidMessages(messages)) {
+    // Validate request body with Zod
+    const parseResult = ChatRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
       return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'messages is required and must be non-empty' },
+        error: {
+          code: 'validation_error',
+          message: 'Invalid request body',
+          details: parseResult.error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        },
         request_id: req.request_id,
       });
     }
-    if (!isValidPriority(priority)) {
-      return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'priority must be cheap, balanced, or best' },
-        request_id: req.request_id,
-      });
-    }
-    if (!isValidLatency(latency_pref)) {
-      return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'latency_pref must be fast or normal' },
-        request_id: req.request_id,
-      });
-    }
-    if (max_cost !== undefined && (typeof max_cost !== 'number' || Number.isNaN(max_cost) || max_cost <= 0)) {
-      return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'max_cost must be a positive number' },
-        request_id: req.request_id,
-      });
-    }
+
+    const { messages, priority, latency_pref, max_cost } = parseResult.data;
 
     const start = Date.now();
     const taskType = classifyTask(messages);

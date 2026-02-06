@@ -1,6 +1,12 @@
 import OpenAI from 'openai';
 import type { ModelRow } from './router.js';
 import { estimateTokensFromMessages, estimateTokensFromText } from './tokens.js';
+import {
+  callProviderWithRetry,
+  ProviderError,
+  isRetryableStatusCode,
+  fetchWithTimeout,
+} from './providerClient.js';
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 const openrouterKey = process.env.OPENROUTER_API_KEY ?? '';
@@ -24,28 +30,46 @@ async function chatWithOpenAICompat(
   endpoint: string,
   apiKey: string,
   modelName: string,
-  messages: OpenAI.ChatCompletionMessageParam[]
+  messages: OpenAI.ChatCompletionMessageParam[],
+  providerName: string = 'openai-compatible'
 ): Promise<CompletionResult> {
   if (!apiKey) throw new Error('Missing API key');
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
+
+  return callProviderWithRetry(
+    async () => {
+      const response = await fetchWithTimeout(
+        endpoint,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ model: modelName, messages }),
+        },
+        30000 // 30 second timeout
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new ProviderError(
+          `Provider error: ${response.status} ${text}`,
+          providerName,
+          response.status,
+          isRetryableStatusCode(response.status)
+        );
+      }
+
+      const data = (await response.json()) as OpenAICompatResponse;
+      const choice = data.choices?.[0];
+      const content = choice?.message?.content ?? '';
+      const fallbackTokens = estimateTokensFromMessages(messages);
+      const inputTokens = data.usage?.prompt_tokens ?? fallbackTokens.inputTokens;
+      const outputTokens = data.usage?.completion_tokens ?? estimateTokensFromText(content);
+      return { content, inputTokens, outputTokens, model: modelName };
     },
-    body: JSON.stringify({ model: modelName, messages }),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Provider error: ${response.status} ${text}`);
-  }
-  const data = (await response.json()) as OpenAICompatResponse;
-  const choice = data.choices?.[0];
-  const content = choice?.message?.content ?? '';
-  const fallbackTokens = estimateTokensFromMessages(messages);
-  const inputTokens = data.usage?.prompt_tokens ?? fallbackTokens.inputTokens;
-  const outputTokens = data.usage?.completion_tokens ?? estimateTokensFromText(content);
-  return { content, inputTokens, outputTokens, model: modelName };
+    providerName
+  );
 }
 
 function buildAnthropicPayload(modelName: string, messages: OpenAI.ChatCompletionMessageParam[]) {
@@ -75,25 +99,43 @@ async function chatWithAnthropic(
   messages: OpenAI.ChatCompletionMessageParam[]
 ): Promise<CompletionResult> {
   if (!anthropicKey) throw new Error('Missing API key');
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-      'Content-Type': 'application/json',
+
+  return callProviderWithRetry(
+    async () => {
+      const response = await fetchWithTimeout(
+        'https://api.anthropic.com/v1/messages',
+        {
+          method: 'POST',
+          headers: {
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(buildAnthropicPayload(modelName, messages)),
+        },
+        45000 // 45 seconds - Anthropic can be slower
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new ProviderError(
+          `Anthropic error: ${response.status} ${text}`,
+          'anthropic',
+          response.status,
+          isRetryableStatusCode(response.status)
+        );
+      }
+
+      const data = (await response.json()) as AnthropicResponse;
+      const content = data.content?.map((c) => c.text ?? '').join('') ?? '';
+      const fallbackTokens = estimateTokensFromMessages(messages);
+      const inputTokens = data.usage?.input_tokens ?? fallbackTokens.inputTokens;
+      const outputTokens = data.usage?.output_tokens ?? estimateTokensFromText(content);
+      return { content, inputTokens, outputTokens, model: modelName };
     },
-    body: JSON.stringify(buildAnthropicPayload(modelName, messages)),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Provider error: ${response.status} ${text}`);
-  }
-  const data = (await response.json()) as AnthropicResponse;
-  const content = data.content?.map((c) => c.text ?? '').join('') ?? '';
-  const fallbackTokens = estimateTokensFromMessages(messages);
-  const inputTokens = data.usage?.input_tokens ?? fallbackTokens.inputTokens;
-  const outputTokens = data.usage?.output_tokens ?? estimateTokensFromText(content);
-  return { content, inputTokens, outputTokens, model: modelName };
+    'anthropic',
+    { timeout: 45000 } // Longer timeout for Anthropic
+  );
 }
 
 type GeminiContentPart = { text?: string };
@@ -137,29 +179,41 @@ async function chatWithGemini(
     modelName
   )}:generateContent?key=${encodeURIComponent(googleKey)}`;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildGeminiPayload(messages)),
-  });
+  return callProviderWithRetry(
+    async () => {
+      const response = await fetchWithTimeout(
+        url,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildGeminiPayload(messages)),
+        },
+        30000 // 30 second timeout
+      );
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Provider error: ${response.status} ${text}`);
-  }
+      if (!response.ok) {
+        const text = await response.text();
+        throw new ProviderError(
+          `Gemini error: ${response.status} ${text}`,
+          'google',
+          response.status,
+          isRetryableStatusCode(response.status)
+        );
+      }
 
-  const data = (await response.json()) as GeminiGenerateContentResponse;
-  const content =
-    data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ??
-    '';
+      const data = (await response.json()) as GeminiGenerateContentResponse;
+      const content =
+        data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
 
-  const fallbackTokens = estimateTokensFromMessages(messages);
-  const inputTokens = data.usageMetadata?.promptTokenCount ?? fallbackTokens.inputTokens;
-  const outputTokens =
-    data.usageMetadata?.candidatesTokenCount ??
-    estimateTokensFromText(content);
+      const fallbackTokens = estimateTokensFromMessages(messages);
+      const inputTokens = data.usageMetadata?.promptTokenCount ?? fallbackTokens.inputTokens;
+      const outputTokens =
+        data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(content);
 
-  return { content, inputTokens, outputTokens, model: modelName };
+      return { content, inputTokens, outputTokens, model: modelName };
+    },
+    'google'
+  );
 }
 
 export async function chatWithProvider(
@@ -168,21 +222,44 @@ export async function chatWithProvider(
   messages: OpenAI.ChatCompletionMessageParam[]
 ): Promise<CompletionResult> {
   if (provider === 'openai' && openai) {
-    const completion = await openai.chat.completions.create({
-      model: modelName,
-      messages,
-    });
-    const choice = completion.choices?.[0];
-    const content = choice?.message?.content ?? '';
-    const inputTokens = completion.usage?.prompt_tokens ?? 0;
-    const outputTokens = completion.usage?.completion_tokens ?? 0;
-    return { content, inputTokens, outputTokens, model: modelName };
+    // Wrap OpenAI SDK calls with timeout and retry
+    return callProviderWithRetry(
+      async () => {
+        const completion = await openai.chat.completions.create(
+          {
+            model: modelName,
+            messages,
+          },
+          {
+            timeout: 30000, // 30 second timeout
+          }
+        );
+        const choice = completion.choices?.[0];
+        const content = choice?.message?.content ?? '';
+        const inputTokens = completion.usage?.prompt_tokens ?? 0;
+        const outputTokens = completion.usage?.completion_tokens ?? 0;
+        return { content, inputTokens, outputTokens, model: modelName };
+      },
+      'openai'
+    );
   }
   if (provider === 'openrouter') {
-    return chatWithOpenAICompat('https://openrouter.ai/api/v1/chat/completions', openrouterKey, modelName, messages);
+    return chatWithOpenAICompat(
+      'https://openrouter.ai/api/v1/chat/completions',
+      openrouterKey,
+      modelName,
+      messages,
+      'openrouter'
+    );
   }
   if (provider === 'groq') {
-    return chatWithOpenAICompat('https://api.groq.com/openai/v1/chat/completions', groqKey, modelName, messages);
+    return chatWithOpenAICompat(
+      'https://api.groq.com/openai/v1/chat/completions',
+      groqKey,
+      modelName,
+      messages,
+      'groq'
+    );
   }
   if (provider === 'anthropic') {
     return chatWithAnthropic(modelName, messages);

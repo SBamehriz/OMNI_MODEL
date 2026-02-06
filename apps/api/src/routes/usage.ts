@@ -1,11 +1,11 @@
 import { supabase } from '../lib/db.js';
 import { premiumEstimate } from '../lib/providers.js';
 import type { RequestContext } from '../lib/auth.js';
+import { UsageQuerySchema, type UsageQuery } from '../lib/schemas.js';
 
-type Query = { from?: string; to?: string };
 type Req = {
   context: RequestContext;
-  query?: Query;
+  query?: UsageQuery;
   request_id?: string;
   log?: { warn: (o: object, s: string) => void };
 };
@@ -14,7 +14,24 @@ type Rep = { status: (c: number) => Rep; send: (b: unknown) => Rep };
 export async function usageRoutes(app: { get: (path: string, h: (req: Req, reply: Rep) => Promise<Rep | void>) => void }) {
   app.get('/usage', async (req: Req, reply: Rep) => {
     const ctx = req.context;
-    const { from, to } = req.query ?? {};
+
+    // Validate query parameters with Zod
+    const parseResult = UsageQuerySchema.safeParse(req.query);
+    if (!parseResult.success) {
+      return reply.status(400).send({
+        error: {
+          code: 'validation_error',
+          message: 'Invalid query parameters',
+          details: parseResult.error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        },
+        request_id: req.request_id,
+      });
+    }
+
+    const { from, to } = parseResult.data;
 
     let query = supabase
       .from('requests')

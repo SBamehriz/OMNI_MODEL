@@ -1,23 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const envCandidates = [
-  path.resolve(process.cwd(), 'apps/api/.env'),
-  path.resolve(process.cwd(), '.env'),
-  path.resolve(here, '../.env'),
-];
-const envPath = envCandidates.find((p) => fs.existsSync(p));
-dotenv.config(envPath ? { path: envPath } : undefined);
-
+// Note: Environment variables are loaded and validated in index.ts
+// This ensures config errors are caught early with clear error messages
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_KEY;
 
 if (!url || !key) {
-  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set');
+  throw new Error(
+    'SUPABASE_URL and SUPABASE_SERVICE_KEY must be set. ' +
+    'This should not happen if validateEnv() was called at startup.'
+  );
 }
 
 export const supabase = createClient(url, key);

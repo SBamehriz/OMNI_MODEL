@@ -1,58 +1,32 @@
 import { classifyTask } from '../lib/taskClassifier.js';
 import { selectModels, getRoutingDecision } from '../lib/router.js';
 import { estimateTokensFromMessages } from '../lib/tokens.js';
+import { DebugRoutingRequestSchema } from '../lib/schemas.js';
 
-type Body = {
-  messages?: Array<{ role: string; content: string }>;
-  priority?: string;
-  latency_pref?: string;
-  max_cost?: number;
-};
-type Req = { body?: Body; request_id?: string };
+type Req = { body?: unknown; request_id?: string };
 type Rep = { status: (c: number) => Rep; send: (b: unknown) => Rep };
-
-function isValidMessages(messages: unknown): messages is Array<{ role: string; content: string }> {
-  if (!Array.isArray(messages) || messages.length === 0) return false;
-  return messages.every(
-    (m) =>
-      m &&
-      typeof m === 'object' &&
-      (m as { role?: string }).role &&
-      (m as { content?: string }).content
-  );
-}
-
-function isValidPriority(value: unknown): value is 'cheap' | 'balanced' | 'best' {
-  return value === undefined || value === 'cheap' || value === 'balanced' || value === 'best';
-}
-
-function isValidLatency(value: unknown): value is 'fast' | 'normal' {
-  return value === undefined || value === 'fast' || value === 'normal';
-}
 
 export async function debugRoutes(app: { post: (path: string, h: (req: Req, reply: Rep) => Rep | Promise<Rep>) => void }) {
   app.post('/debug', async (req: Req, reply: Rep) => {
-    const { messages, priority = 'balanced', latency_pref = 'normal' } = req.body ?? {};
-    if (!isValidMessages(messages)) {
+    // Validate request body with Zod
+    const parseResult = DebugRoutingRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
       return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'messages is required and must be non-empty' },
+        error: {
+          code: 'validation_error',
+          message: 'Invalid request body',
+          details: parseResult.error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        },
         request_id: req.request_id,
       });
     }
-    if (!isValidPriority(priority)) {
-      return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'priority must be cheap, balanced, or best' },
-        request_id: req.request_id,
-      });
-    }
-    if (!isValidLatency(latency_pref)) {
-      return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'latency_pref must be fast or normal' },
-        request_id: req.request_id,
-      });
-    }
-    const task_type = classifyTask(messages ?? []);
-    const tokenEstimate = estimateTokensFromMessages(messages ?? []);
+
+    const { messages, priority, latency_pref } = parseResult.data;
+    const task_type = classifyTask(messages);
+    const tokenEstimate = estimateTokensFromMessages(messages);
 
     const availableProviders = [
       process.env.OPENAI_API_KEY ? 'openai' : null,

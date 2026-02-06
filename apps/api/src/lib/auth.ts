@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { supabase } from './db.js';
 import { checkRateLimit } from './rateLimit.js';
+import { verifyApiKey, isValidApiKeyFormat } from './apiKeys.js';
 
 export type RequestContext = { org_id: string; user_id: string };
 
@@ -43,21 +44,46 @@ export async function authPlugin(app: {
       return errorReply(reply, 'invalid_api_key', 'Missing or invalid API key', 401, req.request_id);
     }
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, org_id')
-      .eq('api_key_hash', key)
-      .limit(1)
-      .single();
+    // Validate key format
+    if (!isValidApiKeyFormat(key)) {
+      return errorReply(reply, 'invalid_api_key', 'Invalid API key format', 401, req.request_id);
+    }
 
-    if (error || !user) {
+    // Extract prefix for indexed lookup (first 8 chars for optimal index performance)
+    const prefix = key.substring(0, 8);
+
+    // Query by prefix (fast indexed lookup)
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, org_id, api_key_hash')
+      .eq('api_key_prefix', prefix);
+
+    if (error) {
+      console.error('Database error during auth:', error);
+      return errorReply(reply, 'internal_error', 'Authentication failed', 500, req.request_id);
+    }
+
+    if (!users || users.length === 0) {
+      return errorReply(reply, 'invalid_api_key', 'Invalid API key', 401, req.request_id);
+    }
+
+    // Verify key against hash(es) using constant-time bcrypt comparison
+    let matchedUser = null;
+    for (const user of users) {
+      if (await verifyApiKey(key, user.api_key_hash)) {
+        matchedUser = user;
+        break;
+      }
+    }
+
+    if (!matchedUser) {
       return errorReply(reply, 'invalid_api_key', 'Invalid API key', 401, req.request_id);
     }
 
     const limit = Number(process.env.RATE_LIMIT_MAX ?? '100');
     const windowSeconds = Number(process.env.RATE_LIMIT_WINDOW_SEC ?? '60');
     const rate = await checkRateLimit({
-      key: `org:${user.org_id}`,
+      key: `org:${matchedUser.org_id}`,
       limit,
       windowSeconds,
     });
@@ -71,8 +97,8 @@ export async function authPlugin(app: {
     }
 
     req.context = {
-      org_id: user.org_id,
-      user_id: user.id,
+      org_id: matchedUser.org_id,
+      user_id: matchedUser.id,
     };
   });
 }
