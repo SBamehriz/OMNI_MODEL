@@ -57,6 +57,7 @@ export async function debugRoutes(app: { post: (path: string, h: (req: Req, repl
     const availableProviders = [
       process.env.OPENAI_API_KEY ? 'openai' : null,
       process.env.ANTHROPIC_API_KEY ? 'anthropic' : null,
+      process.env.GOOGLE_API_KEY ? 'google' : null,
       process.env.OPENROUTER_API_KEY ? 'openrouter' : null,
       process.env.GROQ_API_KEY ? 'groq' : null,
     ].filter(Boolean) as string[];
@@ -86,7 +87,7 @@ export async function debugRoutes(app: { post: (path: string, h: (req: Req, repl
       });
     }
 
-    const decision = getRoutingDecision(models, task_type);
+    const decision = getRoutingDecision(models, task_type, priority, latency_pref);
 
     return reply.send({
       task_type,

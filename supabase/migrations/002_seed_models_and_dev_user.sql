@@ -21,5 +21,7 @@ VALUES
   ('openai', 'gpt-4o-mini', 0.00015, 0.0006, 400, '["chat","summarization"]', false, true, 128000),
   ('openai', 'gpt-4o', 0.0025, 0.01, 800, '["reasoning","coding","chat"]', true, true, 128000),
   ('anthropic', 'claude-3-5-haiku-20241022', 0.0008, 0.004, 350, '["chat","summarization"]', false, true, 200000),
-  ('anthropic', 'claude-3-5-sonnet-20241022', 0.003, 0.015, 600, '["reasoning","coding","chat"]', true, true, 200000)
+  ('anthropic', 'claude-3-5-sonnet-20241022', 0.003, 0.015, 600, '["reasoning","coding","chat"]', true, true, 200000),
+  ('google', 'gemini-1.5-flash', 0.000075, 0.0003, 350, '["chat","summarization"]', false, true, 1000000),
+  ('google', 'gemini-1.5-pro', 0.00125, 0.005, 650, '["reasoning","coding","chat"]', true, true, 2000000)
 ON CONFLICT (provider, model_name) DO NOTHING;

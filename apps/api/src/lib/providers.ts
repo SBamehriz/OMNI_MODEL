@@ -6,6 +6,7 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPE
 const openrouterKey = process.env.OPENROUTER_API_KEY ?? '';
 const groqKey = process.env.GROQ_API_KEY ?? '';
 const anthropicKey = process.env.ANTHROPIC_API_KEY ?? '';
+const googleKey = process.env.GOOGLE_API_KEY ?? '';
 
 export type CompletionResult = {
   content: string;
@@ -95,6 +96,72 @@ async function chatWithAnthropic(
   return { content, inputTokens, outputTokens, model: modelName };
 }
 
+type GeminiContentPart = { text?: string };
+type GeminiContent = { role?: 'user' | 'model'; parts?: GeminiContentPart[] };
+type GeminiGenerateContentResponse = {
+  candidates?: Array<{ content?: { parts?: GeminiContentPart[] } }>;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
+};
+
+function buildGeminiPayload(messages: OpenAI.ChatCompletionMessageParam[]) {
+  const system = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => (typeof m.content === 'string' ? m.content : ''))
+    .join('\n')
+    .trim();
+
+  const contents: GeminiContent[] = messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: typeof m.content === 'string' ? m.content : '' }],
+    }));
+
+  return {
+    contents,
+    ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+  };
+}
+
+async function chatWithGemini(
+  modelName: string,
+  messages: OpenAI.ChatCompletionMessageParam[]
+): Promise<CompletionResult> {
+  if (!googleKey) throw new Error('Missing API key');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+    modelName
+  )}:generateContent?key=${encodeURIComponent(googleKey)}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildGeminiPayload(messages)),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Provider error: ${response.status} ${text}`);
+  }
+
+  const data = (await response.json()) as GeminiGenerateContentResponse;
+  const content =
+    data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ??
+    '';
+
+  const fallbackTokens = estimateTokensFromMessages(messages);
+  const inputTokens = data.usageMetadata?.promptTokenCount ?? fallbackTokens.inputTokens;
+  const outputTokens =
+    data.usageMetadata?.candidatesTokenCount ??
+    estimateTokensFromText(content);
+
+  return { content, inputTokens, outputTokens, model: modelName };
+}
+
 export async function chatWithProvider(
   provider: string,
   modelName: string,
@@ -119,6 +186,9 @@ export async function chatWithProvider(
   }
   if (provider === 'anthropic') {
     return chatWithAnthropic(modelName, messages);
+  }
+  if (provider === 'google') {
+    return chatWithGemini(modelName, messages);
   }
   throw new Error(`Unsupported provider: ${provider}`);
 }

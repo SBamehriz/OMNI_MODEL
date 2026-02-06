@@ -14,7 +14,7 @@
 - Node.js (LTS)
 - Docker (optional, for local runs)
 - [Supabase](https://supabase.com) (Postgres + Auth)
-- [Upstash](https://upstash.com) Redis (caching)
+- [Upstash](https://upstash.com) Redis (optional, for multi-instance rate limits)
 
 ---
 
@@ -29,10 +29,10 @@ OMNI MODEL/
 │   ├── ARCHITECTURE.md
 │   ├── API.md
 │   └── AGENTS.md
-├── apps/           # (future)
+├── apps/
 │   ├── api/        # Fastify router API
 │   └── dashboard/  # Next.js analytics UI
-└── packages/       # (future) shared types, etc.
+└── packages/       # shared types, etc.
 ```
 
 ---

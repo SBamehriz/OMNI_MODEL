@@ -68,7 +68,7 @@ flowchart LR
 |-------|--------|--------|
 | Backend | Node.js, TypeScript, Fastify | [x] |
 | Database | Supabase (Postgres) | [x] |
-| Cache | Redis (Upstash) | [ ] |
+| Cache | Redis (Upstash) for rate limits (optional) | [x] |
 | Hosting | Vercel (API + dashboard); optional Fly.io for router | [ ] |
 | Dashboard | Next.js, Tailwind, chart library | [x] |
 | MVP providers | OpenAI, Anthropic, OpenRouter, Groq | [x] |
@@ -81,17 +81,16 @@ flowchart LR
 
 | Variable | Purpose | Status |
 |----------|---------|--------|
-| `SUPABASE_URL` | Postgres + auth | [ ] |
-| `SUPABASE_SERVICE_KEY` | Server-side DB/auth | [ ] |
-| `OPENAI_API_KEY` | OpenAI | [ ] |
-| `ANTHROPIC_API_KEY` | Anthropic | [ ] |
-| `OPENROUTER_API_KEY` | OpenRouter | [ ] |
-| `GROQ_API_KEY` | Groq (optional) | [ ] |
-| `UPSTASH_REDIS_REST_URL` | Redis REST URL | [ ] |
-| `UPSTASH_REDIS_REST_TOKEN` | Redis token | [ ] |
-| `RATE_LIMIT_MAX` | Requests allowed per window | [ ] |
-| `RATE_LIMIT_WINDOW_SEC` | Rate limit window in seconds | [ ] |
-| `API_KEY_VERIFICATION` | e.g. Supabase or custom API key lookup | [ ] |
+| `SUPABASE_URL` | Postgres + auth | [x] |
+| `SUPABASE_SERVICE_KEY` | Server-side DB/auth | [x] |
+| `OPENAI_API_KEY` | OpenAI | [x] |
+| `ANTHROPIC_API_KEY` | Anthropic | [x] |
+| `OPENROUTER_API_KEY` | OpenRouter | [x] |
+| `GROQ_API_KEY` | Groq (optional) | [x] |
+| `UPSTASH_REDIS_REST_URL` | Redis REST URL | [x] |
+| `UPSTASH_REDIS_REST_TOKEN` | Redis token | [x] |
+| `RATE_LIMIT_MAX` | Requests allowed per window | [x] |
+| `RATE_LIMIT_WINDOW_SEC` | Rate limit window in seconds | [x] |
 
 - [x] All secrets from env; no hardcoded keys.
 
@@ -296,4 +295,4 @@ score = w1 * (1 - cost_normalized) + w2 * (1 - latency_normalized) + w3 * task_m
 6. [x] Usage analytics integrity (`/v1/usage`).
 7. [x] Rate limiting + abuse protection.
 8. [x] Monitoring + error visibility (request_id, error shape, GET /ready).
-9. [-] Deployment hardening (CORS, deploy docs, Vercel config; deploy steps in README).
+9. [x] Deployment hardening (CORS, deploy docs, Vercel config; deploy steps in README).
