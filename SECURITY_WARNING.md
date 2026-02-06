@@ -13,7 +13,7 @@ During security audit on 2026-02-06, the following credentials were found in `ap
 
 2. **Rotate Google API Key**
    - Go to Google Cloud Console → APIs & Services → Credentials
-   - Delete key: `AIzaSyClRT4tFGvZMsGfQAl8KLL6cAMbv6cSAg8`
+   - Delete key: `[REDACTED]`
    - Generate new API key with restricted scope
    - Update production environment variables
 

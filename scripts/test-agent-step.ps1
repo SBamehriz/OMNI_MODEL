@@ -3,7 +3,14 @@
 # - Without max_cost: expect 200 with output, model_used, cost (or 502 if all providers fail).
 # - With very low max_cost: expect 400 max_cost_exceeded.
 $base = "http://localhost:3000"
-$key = "omni-dev-key-change-in-production"
+$key = $env:OMNI_API_KEY
+if (-not $key) {
+  $key = $env:NEXT_PUBLIC_API_KEY
+}
+if (-not $key) {
+  Write-Error "Set OMNI_API_KEY (or NEXT_PUBLIC_API_KEY) in your environment before running this script."
+  exit 1
+}
 $headers = @{
   "Content-Type" = "application/json"
   "Authorization" = "Bearer $key"

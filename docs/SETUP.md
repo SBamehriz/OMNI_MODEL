@@ -16,7 +16,24 @@ Use this as your single checklist. You’ve **connected Supabase** ✓; below is
   2. `supabase/migrations/002_seed_models_and_dev_user.sql`
   3. `supabase/migrations/003_add_request_token_columns.sql`
 
-- **Dev API key** (from seed): `omni-dev-key-change-in-production` — use this in the dashboard and in `Authorization: Bearer ...` for local testing.
+- **Dev API key:** Generate one and seed its hash in Supabase.
+  - Run `npm run generate-key --workspace=apps/api` (or `cd apps/api && npm run generate-key`).
+  - In Supabase → **SQL Editor**, insert (or update) the dev user with the generated hash and prefix:
+
+```sql
+INSERT INTO users (id, org_id, email, api_key_hash, api_key_prefix)
+VALUES (
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
+  'dev@localhost',
+  '<PASTE_BCRYPT_HASH>',
+  '<PASTE_PREFIX>'
+)
+ON CONFLICT (id) DO UPDATE
+SET
+  api_key_hash = EXCLUDED.api_key_hash,
+  api_key_prefix = EXCLUDED.api_key_prefix;
+```
 
 ---
 
@@ -44,8 +61,8 @@ Create `apps/api/.env` (copy from `apps/api/.env.example`). Fill at least the **
 ```env
 PORT=3000
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-SUPABASE_SERVICE_KEY=eyJhbGc...your-service-role-key
-OPENAI_API_KEY=sk-...
+SUPABASE_SERVICE_KEY=YOUR_SERVICE_ROLE_KEY
+OPENAI_API_KEY=YOUR_OPENAI_KEY
 ```
 
 Add other provider keys and optional vars as needed.
@@ -59,13 +76,13 @@ Create `apps/dashboard/.env.local`:
 | Variable | Value |
 |----------|--------|
 | `NEXT_PUBLIC_API_URL` | `http://localhost:3000` (local) or your API URL in production |
-| `NEXT_PUBLIC_API_KEY` | `omni-dev-key-change-in-production` (dev key from seed) or your production API key |
+| `NEXT_PUBLIC_API_KEY` | Your generated API key (store only in `.env`) |
 
 **Example:**
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000
-NEXT_PUBLIC_API_KEY=omni-dev-key-change-in-production
+NEXT_PUBLIC_API_KEY=YOUR_API_KEY
 ```
 
 ---
@@ -102,15 +119,21 @@ npm run dev:dashboard
 With API and dashboard running:
 
 1. Open [http://localhost:3001](http://localhost:3001) — you should see the dashboard (overview may show 0 until you send requests).
-2. Send a request to the API, e.g.:
+2. Export your API key in the shell (PowerShell example):
+
+```powershell
+$env:OMNI_API_KEY="YOUR_API_KEY"
+```
+
+3. Send a request to the API, e.g.:
 
 ```bash
 curl -X POST http://localhost:3000/v1/chat \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer omni-dev-key-change-in-production" \
+  -H "Authorization: Bearer $OMNI_API_KEY" \
   -d "{\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}"
 ```
 
-3. Refresh the dashboard — you should see request count and cost update.
+4. Refresh the dashboard — you should see request count and cost update.
 
 You now have all the tools and env you need to run and deploy Omni-Model Router.

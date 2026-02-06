@@ -28,7 +28,7 @@ export function Overview({ from, to }: Props) {
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_API_KEY;
     if (!apiKey) {
-      setError('Set NEXT_PUBLIC_API_KEY to load usage (e.g. omni-dev-key-change-in-production)');
+      setError('Set NEXT_PUBLIC_API_KEY in your dashboard env to load usage.');
       setLoading(false);
       return;
     }

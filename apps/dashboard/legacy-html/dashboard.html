@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Omni Model Router</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0a0f;--bg-sidebar:#0e0e15;--bg-elevated:#12121a;--bg-card:#16161f;--bg-card-hover:#1c1c28;--bg-input:#12121a;--border:rgba(255,255,255,0.06);--border-hover:rgba(62,207,165,0.3);--text:#f0f0f5;--text-secondary:#8888a0;--text-tertiary:#55556a;--accent:#3ecfa5;--accent-dim:rgba(62,207,165,0.12);--accent-glow:rgba(62,207,165,0.3);--accent2:#6c5ce7;--accent3:#00b4d8;--red:#e06c75;--orange:#e5c07b;--green:#3ecfa5;--gradient:linear-gradient(135deg,#3ecfa5 0%,#00b4d8 50%,#6c5ce7 100%);--gradient-text:linear-gradient(135deg,#3ecfa5,#00b4d8,#6c5ce7);--font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;--mono:'JetBrains Mono',monospace;--radius:10px;--radius-lg:16px}
@@ -380,7 +378,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <div class="card-body">
       <div class="api-key-display">
         <div><span class="status-dot active"></span></div>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px;margin-bottom:2px">Production Key</div><div class="api-key-text">sk-omni-prod-a8f2c9d1e4b7...3k9m</div></div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px;margin-bottom:2px">Production Key</div><div class="api-key-text">example_live_key_01</div></div>
         <div class="api-key-actions">
           <button class="btn btn-ghost btn-sm">Copy</button>
           <button class="btn btn-danger btn-sm">Revoke</button>
@@ -388,7 +386,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
       <div class="api-key-display">
         <div><span class="status-dot active"></span></div>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px;margin-bottom:2px">Development Key</div><div class="api-key-text">sk-omni-dev-x7q2w5n8p1r4...6j3f</div></div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px;margin-bottom:2px">Development Key</div><div class="api-key-text">example_test_key_02</div></div>
         <div class="api-key-actions">
           <button class="btn btn-ghost btn-sm">Copy</button>
           <button class="btn btn-danger btn-sm">Revoke</button>
@@ -396,7 +394,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
       <div class="api-key-display">
         <div><span class="status-dot inactive"></span></div>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px;margin-bottom:2px">Staging Key <span style="font-size:10px;color:var(--text-tertiary)">(inactive)</span></div><div class="api-key-text">sk-omni-stg-m4k8v2c6y9t1...7h5b</div></div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px;margin-bottom:2px">Staging Key <span style="font-size:10px;color:var(--text-tertiary)">(inactive)</span></div><div class="api-key-text">example_stage_key_03</div></div>
         <div class="api-key-actions">
           <button class="btn btn-ghost btn-sm">Activate</button>
           <button class="btn btn-danger btn-sm">Delete</button>
@@ -633,7 +631,7 @@ if (line) {
 gsap.from('.progress-fill', { width: 0, duration: 1.5, ease: "power2.out", delay: 0.6, stagger: 0.1 });
 
 function createNewKey() {
-  alert('New API key created: sk-omni-new-' + Math.random().toString(36).substr(2, 16));
+  alert('New API key created: example_key_' + Math.random().toString(36).substr(2, 16));
 }
 </script>
 </body>

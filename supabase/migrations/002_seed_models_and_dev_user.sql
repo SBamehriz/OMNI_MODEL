@@ -5,15 +5,8 @@ INSERT INTO orgs (id, name, billing_plan)
 VALUES ('00000000-0000-0000-0000-000000000001', 'Default Org', 'free')
 ON CONFLICT DO NOTHING;
 
--- Dev API key: omni-dev-key-change-in-production (store hash in production)
-INSERT INTO users (id, org_id, email, api_key_hash)
-VALUES (
-  '00000000-0000-0000-0000-000000000002',
-  '00000000-0000-0000-0000-000000000001',
-  'dev@localhost',
-  'omni-dev-key-change-in-production'
-)
-ON CONFLICT (api_key_hash) DO NOTHING;
+-- Dev user is not seeded by default.
+-- Generate an API key and insert a user record per docs/SETUP.md.
 
 -- Model registry: cheap chat, reasoning, coding, fallback (pricing approx 2024)
 INSERT INTO models (provider, model_name, cost_input, cost_output, avg_latency, strengths, supports_functions, supports_vision, max_tokens)

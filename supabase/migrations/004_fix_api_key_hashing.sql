@@ -4,15 +4,8 @@
 -- Add comment to clarify that api_key_hash should contain bcrypt hashes
 COMMENT ON COLUMN users.api_key_hash IS 'bcrypt hash of API key (cost factor 12)';
 
--- Update the dev user with properly hashed API key
--- Original key: 'omni-dev-key-change-in-production'
--- Hash generated with: bcrypt.hash('omni-dev-key-change-in-production', 12)
--- Prefix: 'omni-dev' (first 8 chars)
-UPDATE users
-SET
-  api_key_hash = '$2b$12$nRpDjOWxlH8wV95ZoHaBMunUNyzjyZ1eCezhsc5PIcW.Bw9Zo117.',
-  api_key_prefix = 'omni-dev'
-WHERE email = 'dev@localhost';
+-- If you previously stored plaintext keys, update each user with a bcrypt hash
+-- and set api_key_prefix to the first 8 characters of the key.
 
 -- For production deployment:
 -- 1. Generate new API keys using the API key generation utility

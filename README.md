@@ -41,7 +41,7 @@ OMNI MODEL/
 
 1. [ ] **Database:** Create a Supabase project and run the SQL in `supabase/migrations/` (001, 002, then 003) in the SQL editor.
 2. [ ] **API:** From repo root, `npm install` then `cd apps/api`, copy `.env.example` to `.env`, set `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and at least one provider key (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` / `GROQ_API_KEY`). Optional: `CORS_ORIGIN` (dashboard URL for cross-origin requests), `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_SEC`. Run `npm run dev` (or from root: `npm run dev:api`). The API loads env via `dotenv` and listens on port 3000.
-3. [ ] **Dashboard:** In `apps/dashboard`, copy `.env.example` to `.env.local`, set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY` (use the dev key from seed: `omni-dev-key-change-in-production`). Run `npm run dev` (or from root: `npm run dev:dashboard`). Dashboard runs on port 3001.
+3. [ ] **Dashboard:** In `apps/dashboard`, copy `.env.example` to `.env.local`, set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY` (use your dev key from Supabase or generate one per `docs/SETUP.md`). Run `npm run dev` (or from root: `npm run dev:dashboard`). Dashboard runs on port 3001.
 
 ---
 
