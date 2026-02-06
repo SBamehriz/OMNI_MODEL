@@ -1,10 +1,10 @@
 # Dependencies
 node_modules/
 
-# Env and secrets
+# Environment and secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # Build outputs
 dist/
@@ -25,5 +25,14 @@ Thumbs.db
 *.swp
 *.swo
 
-# Supabase local (if used)
+# Supabase local
 .supabase/
+
+# Turbo / monorepo cache
+.turbo/
+
+# TypeScript incremental
+*.tsbuildinfo
+
+# Vercel
+.vercel/

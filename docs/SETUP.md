@@ -15,6 +15,8 @@ Use this as your single checklist. You’ve **connected Supabase** ✓; below is
   1. `supabase/migrations/001_initial_schema.sql`
   2. `supabase/migrations/002_seed_models_and_dev_user.sql`
   3. `supabase/migrations/003_add_request_token_columns.sql`
+  4. `supabase/migrations/004_fix_api_key_hashing.sql`
+  5. `supabase/migrations/005_add_compound_indexes.sql`
 
 - **Dev API key:** Generate one and seed its hash in Supabase.
   - Run `npm run generate-key --workspace=apps/api` (or `cd apps/api && npm run generate-key`).

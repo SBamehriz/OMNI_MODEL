@@ -2,7 +2,7 @@
 
 - [ ] Goal: Build a production-ready MVP: one API that receives AI requests, detects task type, routes to the optimal model, tracks cost and latency, and shows savings in a dashboard.
 - [ ] Timeline: ~30–45 days.
-- [ ] Positioning: The most efficient API for AI (see [IDEA.md](IDEA.md)).
+- [ ] Positioning: The most efficient API for AI (see [IDEA.md](IDEA.md) in docs/).
 
 **Progress legend:** `[ ] Not started` `[-] In progress` `[x] Done` `[~] Blocked`
 
