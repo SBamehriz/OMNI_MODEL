@@ -1,13 +1,7 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const Fastify = require('fastify') as (opts?: { logger?: boolean }) => {
-  register: (p: (instance: any) => Promise<void>, opts?: { prefix?: string }) => Promise<void>;
-  get: (path: string, h: (req: any, reply: any) => Promise<unknown>) => void;
-  addHook: (name: string, fn: (req: any, reply: any) => Promise<void> | void) => void;
-  setErrorHandler: (fn: (err: Error, req: any, reply: any) => void) => void;
-  listen: (opts: { port: number; host: string }) => Promise<string>;
-  log: { info: (o: object, s?: string) => void; error: (o: object, s?: string) => void };
-};
-
+import 'dotenv/config';
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import { supabase } from './lib/db.js';
 import { chatRoutes } from './routes/chat.js';
 import { usageRoutes } from './routes/usage.js';
 import { modelsRoutes } from './routes/models.js';
@@ -15,6 +9,12 @@ import { debugRoutes } from './routes/debug.js';
 import { authPlugin } from './lib/auth.js';
 
 const app = Fastify({ logger: true });
+
+const corsOrigin = process.env.CORS_ORIGIN ?? '';
+await app.register(cors, {
+  origin: corsOrigin ? corsOrigin.split(',').map((o) => o.trim()) : true,
+  credentials: true,
+});
 
 app.addHook('onResponse', async (req, reply) => {
   const request_id = req.request_id ?? 'unknown';
@@ -38,6 +38,14 @@ app.setErrorHandler((err, req, reply) => {
 });
 
 app.get('/health', async () => ({ status: 'ok' }));
+
+app.get('/ready', async (_req, reply) => {
+  const { error } = await supabase.from('orgs').select('id').limit(1).maybeSingle();
+  if (error) {
+    return reply.status(503).send({ status: 'degraded', message: 'Database unavailable' });
+  }
+  return reply.send({ status: 'ok' });
+});
 
 await app.register(authPlugin);
 await app.register(chatRoutes, { prefix: '/v1' });

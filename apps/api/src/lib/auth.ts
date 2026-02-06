@@ -37,7 +37,7 @@ export async function authPlugin(app: {
   app.addHook('preHandler', async (req: Req & { context?: RequestContext }, reply: Rep) => {
     if (!req.request_id) req.request_id = randomUUID();
     const path = (req as { raw?: { url?: string } }).raw?.url?.split('?')[0];
-    if (path === '/health') return;
+    if (path === '/health' || path === '/ready') return;
     const key = getApiKey(req);
     if (!key) {
       return errorReply(reply, 'invalid_api_key', 'Missing or invalid API key', 401, req.request_id);

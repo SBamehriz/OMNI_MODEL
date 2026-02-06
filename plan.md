@@ -21,8 +21,8 @@
 
 ## 2. High-level architecture
 
-- [ ] See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for component details.
-- [ ] Contract: [docs/API.md](docs/API.md).
+- [x] See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for component details.
+- [x] Contract: [docs/API.md](docs/API.md).
 
 ```mermaid
 flowchart LR
@@ -58,7 +58,7 @@ flowchart LR
   DB --> UI
 ```
 
-- [ ] Request flow: Client → API Gateway → Task Analyzer → Routing Engine → Model Provider → Metrics Logger → Database → (optional) Dashboard.
+- [x] Request flow: Client → API Gateway → Task Analyzer → Routing Engine → Model Provider → Metrics Logger → Database → (optional) Dashboard.
 
 ---
 
@@ -93,7 +93,7 @@ flowchart LR
 | `RATE_LIMIT_WINDOW_SEC` | Rate limit window in seconds | [ ] |
 | `API_KEY_VERIFICATION` | e.g. Supabase or custom API key lookup | [ ] |
 
-- [ ] All secrets from env; no hardcoded keys.
+- [x] All secrets from env; no hardcoded keys.
 
 ---
 
@@ -194,6 +194,8 @@ score = w1 * (1 - cost_normalized) + w2 * (1 - latency_normalized) + w3 * task_m
 
 | Method | Path | Purpose | Status |
 |--------|------|---------|--------|
+| GET | `/health` | Liveness | [x] |
+| GET | `/ready` | Readiness (DB connectivity) | [x] |
 | POST | `/v1/chat` | Main routing endpoint | [x] |
 | POST | `/v1/agent-step` | Agent workflow steps | [x] |
 | GET | `/v1/usage` | Cost/usage stats | [x] |
@@ -216,7 +218,7 @@ score = w1 * (1 - cost_normalized) + w2 * (1 - latency_normalized) + w3 * task_m
 ## 11. Security (MVP)
 
 - [x] API keys per org (or user); no keys in logs.
-- [ ] Rate limiting (e.g. 100 req/min per org; exact limits TBD).
+- [x] Rate limiting (e.g. 100 req/min per org; Upstash or in-memory fallback).
 - [x] All secrets in env; basic request logging for debugging.
 - [x] No enterprise compliance (SSO, audit logs, etc.) in MVP.
 
@@ -228,10 +230,10 @@ score = w1 * (1 - cost_normalized) + w2 * (1 - latency_normalized) + w3 * task_m
 |------|----------------|----------|--------|
 | Cheap chat | OpenAI gpt-4o-mini or Anthropic claude-3-haiku | chat, simple summarization | [x] |
 | Reasoning | OpenAI gpt-4o or Anthropic claude-3-sonnet | reasoning, complex analysis | [x] |
-| Coding | OpenRouter or Groq coding model | coding | [ ] |
-| Fallback | Cheapest stable model | when primary/backup fail | [ ] |
+| Coding | OpenRouter or Groq coding model | coding | [x] |
+| Fallback | Cheapest stable model | when primary/backup fail | [x] |
 
-- [ ] Enough for MVP; extend via `models` table.
+- [x] Enough for MVP; extend via `models` table.
 
 ---
 
@@ -249,16 +251,17 @@ score = w1 * (1 - cost_normalized) + w2 * (1 - latency_normalized) + w3 * task_m
 - [x] Week 1: Project setup, DB schema, connect one provider, manual routing (no task detection).
 - [x] Week 2: Task classifier, routing engine, fallback chain.
 - [x] Week 3: Cost tracking, request logging, dashboard UI (overview, usage, model breakdown).
-- [ ] Week 4: Polish, deploy (Vercel + Supabase + Upstash), first beta users.
+- [-] Week 4: Polish, deploy (Vercel + Supabase + Upstash), first beta users.
 
 ---
 
 ## 15. Deployment
 
-- [ ] **API + dashboard:** Vercel.
-- [ ] **DB:** Supabase.
-- [ ] **Redis:** Upstash.
-- [ ] **Optional:** Fly.io for router if needed.
+- [ ] **API + dashboard:** Vercel (dashboard); API as long-running on Fly.io / Railway / VPS.
+- [ ] **DB:** Supabase (migrations in repo; run in SQL editor).
+- [ ] **Redis:** Upstash (optional; in-memory fallback when not set).
+- [x] **CORS:** `CORS_ORIGIN` env for dashboard origin.
+- [x] **Docs:** README Deployment section; dashboard `vercel.json`.
 - [ ] Add logging and basic monitoring.
 
 ---
@@ -291,6 +294,6 @@ score = w1 * (1 - cost_normalized) + w2 * (1 - latency_normalized) + w3 * task_m
 4. [x] Routing logic + fallback.
 5. [x] Accurate cost + token accounting.
 6. [x] Usage analytics integrity (`/v1/usage`).
-7. [ ] Rate limiting + abuse protection.
-8. [ ] Monitoring + error visibility.
-9. [ ] Deployment hardening.
+7. [x] Rate limiting + abuse protection.
+8. [x] Monitoring + error visibility (request_id, error shape, GET /ready).
+9. [-] Deployment hardening (CORS, deploy docs, Vercel config; deploy steps in README).

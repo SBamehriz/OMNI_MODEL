@@ -4,9 +4,22 @@ Contract only; no implementation. Use this for backend and dashboard alignment. 
 
 ---
 
+## Unauthenticated endpoints
+
+- **GET `/health`** — Liveness. Returns `{ "status": "ok" }`. No API key.
+- **GET `/ready`** — Readiness (DB connectivity). Returns `{ "status": "ok" }` or `503` with `{ "status": "degraded", "message": "Database unavailable" }`. No API key.
+
+---
+
+## CORS
+
+When the API is served from a different origin than the dashboard, set `CORS_ORIGIN` (e.g. `https://your-dashboard.vercel.app` or comma-separated list) so the browser allows requests. With no value, all origins are allowed (dev-friendly).
+
+---
+
 ## Authentication
 
-All endpoints require an API key.
+All other endpoints require an API key.
 
 - **Header:** `Authorization: Bearer <api_key>` or `X-API-Key: <api_key>`
 - Invalid or missing key → `401` with error body below.
