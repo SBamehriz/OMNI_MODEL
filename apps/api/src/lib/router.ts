@@ -10,7 +10,63 @@ export type ModelRow = {
   cost_output: number;
   avg_latency: number;
   strengths: string[];
+  quality_rating?: number; // 0-100 scale (from ArtificialAnalysis)
+  speed_index?: number; // 0-100 scale
+  price_index?: number; // 0-100 scale
+  deprecated?: boolean;
 };
+
+// In-memory cache for model registry
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let modelCache: { data: ModelRow[]; timestamp: number } | null = null;
+
+/**
+ * Fetch models from database with caching
+ */
+async function getModelsFromRegistry(): Promise<ModelRow[]> {
+  // Check if cache is valid
+  if (modelCache && Date.now() - modelCache.timestamp < CACHE_TTL_MS) {
+    return modelCache.data;
+  }
+
+  // Fetch from database
+  const { data: rows, error } = await supabase
+    .from('models')
+    .select('id, provider, model_name, cost_input, cost_output, avg_latency, strengths, quality_rating, speed_index, price_index, deprecated');
+
+  if (error || !rows?.length) {
+    // If fetch fails but we have stale cache, use it
+    if (modelCache) {
+      return modelCache.data;
+    }
+    return [];
+  }
+
+  // Map to ModelRow and update cache
+  const models: ModelRow[] = rows.map((r) => ({
+    id: r.id,
+    provider: r.provider,
+    model_name: r.model_name,
+    cost_input: Number(r.cost_input),
+    cost_output: Number(r.cost_output),
+    avg_latency: r.avg_latency ?? 0,
+    strengths: (r.strengths as string[]) ?? [],
+    quality_rating: r.quality_rating ? Number(r.quality_rating) : undefined,
+    speed_index: r.speed_index ? Number(r.speed_index) : undefined,
+    price_index: r.price_index ? Number(r.price_index) : undefined,
+    deprecated: r.deprecated ?? false,
+  }));
+
+  modelCache = { data: models, timestamp: Date.now() };
+  return models;
+}
+
+/**
+ * Invalidate the model cache (call after model updates)
+ */
+export function invalidateModelCache(): void {
+  modelCache = null;
+}
 
 export type RoutingDecision = {
   provider: string;
@@ -47,19 +103,21 @@ function normalizeInverse(value: number, min: number, max: number): number {
  */
 export async function selectModels(
   taskType: TaskType,
-  priority: 'cheap' | 'balanced' | 'best',
+  priority: 'cheap' | 'balanced' | 'best' | 'quality',
   latencyPref: 'fast' | 'normal',
   options?: { maxCost?: number; tokenEstimate?: TokenEstimate; availableProviders?: string[] }
 ): Promise<ModelRow[]> {
-  const { data: rows, error } = await supabase
-    .from('models')
-    .select('id, provider, model_name, cost_input, cost_output, avg_latency, strengths');
+  // Fetch models from cache or database
+  const rows = await getModelsFromRegistry();
 
-  if (error || !rows?.length) return [];
+  if (!rows.length) return [];
+
+  // Filter out deprecated models
+  const activeModels = rows.filter((r) => !r.deprecated);
 
   const providerFiltered = options?.availableProviders?.length
-    ? rows.filter((r) => options.availableProviders?.includes(r.provider))
-    : rows;
+    ? activeModels.filter((r) => options.availableProviders?.includes(r.provider))
+    : activeModels;
 
   if (!providerFiltered.length) return [];
 
@@ -90,19 +148,32 @@ export async function selectModels(
   const latMin = Math.min(...latencyValues);
   const latMax = Math.max(...latencyValues);
 
-  const balancedWeights =
-    latencyPref === 'fast'
-      ? { cost: 0.3, latency: 0.4, task: 0.3 }
-      : { cost: 0.4, latency: 0.3, task: 0.3 };
+  // Determine weights based on priority mode
+  let weights: { cost: number; latency: number; task: number; quality: number };
+
+  if (priority === 'quality') {
+    // Quality mode: Heavily favor quality ratings
+    weights = { cost: 0.1, latency: 0.2, task: 0.3, quality: 0.4 };
+  } else {
+    // Balanced mode (with latency preference adjustment)
+    const balancedWeights =
+      latencyPref === 'fast'
+        ? { cost: 0.3, latency: 0.35, task: 0.25, quality: 0.1 }
+        : { cost: 0.35, latency: 0.25, task: 0.3, quality: 0.1 };
+    weights = balancedWeights;
+  }
 
   scored = scored.map((r) => {
     const costNorm = normalizeInverse(r.estimatedCost, costMin, costMax);
     const latencyNorm = normalizeInverse(r.avg_latency ?? 0, latMin, latMax);
+    const qualityNorm = ((r as { quality_rating?: number }).quality_rating ?? 50) / 100; // 0-1 scale
+
     const score =
-      balancedWeights.cost * costNorm +
-      balancedWeights.latency * latencyNorm +
-      balancedWeights.task * r.match;
-    return { ...r, costNorm, latencyNorm, score };
+      weights.cost * costNorm +
+      weights.latency * latencyNorm +
+      weights.task * r.match +
+      weights.quality * qualityNorm;
+    return { ...r, costNorm, latencyNorm, qualityNorm, score };
   });
 
   let ordered: typeof scored = [];

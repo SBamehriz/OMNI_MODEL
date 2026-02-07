@@ -203,31 +203,24 @@ export async function chatRoutes(app: { post: (path: string, h: (req: Req, reply
 
   app.post('/agent-step', async (req: Req, reply: Rep) => {
     const ctx = req.context;
-    const { messages, priority = 'balanced', latency_pref = 'normal', max_cost } = req.body ?? {};
-    if (!isValidMessages(messages)) {
+
+    // Validate request body with Zod
+    const parseResult = ChatRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
       return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'messages is required and must be non-empty' },
+        error: {
+          code: 'validation_error',
+          message: 'Invalid request body',
+          details: parseResult.error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        },
         request_id: req.request_id,
       });
     }
-    if (!isValidPriority(priority)) {
-      return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'priority must be cheap, balanced, or best' },
-        request_id: req.request_id,
-      });
-    }
-    if (!isValidLatency(latency_pref)) {
-      return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'latency_pref must be fast or normal' },
-        request_id: req.request_id,
-      });
-    }
-    if (max_cost !== undefined && (typeof max_cost !== 'number' || Number.isNaN(max_cost) || max_cost <= 0)) {
-      return reply.status(400).send({
-        error: { code: 'invalid_request', message: 'max_cost must be a positive number' },
-        request_id: req.request_id,
-      });
-    }
+
+    const { messages, priority, latency_pref, max_cost } = parseResult.data;
     const start = Date.now();
     const taskType = 'agent_step';
     const tokenEstimate = estimateTokensFromMessages(messages);

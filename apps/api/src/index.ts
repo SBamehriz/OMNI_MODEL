@@ -14,7 +14,10 @@ import { modelsRoutes } from './routes/models.js';
 import { debugRoutes } from './routes/debug.js';
 import { authPlugin } from './lib/auth.js';
 
-const app = Fastify({ logger: true });
+const app = Fastify({
+  logger: true,
+  bodyLimit: 10 * 1024 * 1024, // 10MB limit to prevent DoS attacks
+});
 
 await app.register(cors, {
   origin: env.CORS_ORIGIN ? env.CORS_ORIGIN.split(',').map((o) => o.trim()) : true,
@@ -63,20 +66,20 @@ await app.listen({ port: env.PORT, host: '0.0.0.0' });
 // Graceful shutdown handlers
 // Allow in-flight requests to complete before shutting down
 const gracefulShutdown = async (signal: string) => {
-  console.log(`\n${signal} received, starting graceful shutdown...`);
+  app.log.info(`${signal} received, starting graceful shutdown...`);
 
   try {
     // Stop accepting new connections
     await app.close();
-    console.log('✓ HTTP server closed');
+    app.log.info('✓ HTTP server closed');
 
     // Supabase client connections will be cleaned up automatically
-    console.log('✓ Database connections closed');
+    app.log.info('✓ Database connections closed');
 
-    console.log('✓ Graceful shutdown complete');
+    app.log.info('✓ Graceful shutdown complete');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error during graceful shutdown:', error);
+    app.log.error({ err: error }, '❌ Error during graceful shutdown');
     process.exit(1);
   }
 };
@@ -87,11 +90,11 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught errors
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  app.log.error({ reason, promise }, 'Unhandled Rejection');
   // Don't exit - let the error handler deal with it
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  app.log.error({ err: error }, 'Uncaught Exception');
   gracefulShutdown('UNCAUGHT_EXCEPTION');
 });

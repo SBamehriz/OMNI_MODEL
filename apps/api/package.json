@@ -7,7 +7,11 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "generate-key": "tsx scripts/generateApiKey.ts"
+    "generate-key": "tsx scripts/generateApiKey.ts",
+    "sync-models": "tsx scripts/syncAllModels.ts",
+    "sync-openrouter": "tsx scripts/syncModelsFromOpenRouter.ts",
+    "sync-aa": "tsx scripts/syncRatingsFromAA.ts",
+    "validate-pricing": "tsx scripts/validatePricing.ts"
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",

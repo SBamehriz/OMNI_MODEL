@@ -1,0 +1,173 @@
+# Model Configuration
+#
+# This file provides centralized configuration for all AI models in the routing system.
+# It allows manual overrides of pricing, preferences, and metadata that complement
+# automated data from OpenRouter and ArtificialAnalysis.
+#
+# Usage:
+#   - sync_source: 'openrouter' | 'manual' | 'artificialanalysis'
+#   - enabled: true/false (disable models without removing from database)
+#   - override_pricing: Manual price overrides (takes precedence over synced data)
+#   - tags: Custom task type mappings for routing
+#   - quality_weight: Multiplier for quality-based routing (0-2.0, default 1.0)
+
+models:
+  # OpenAI Models
+  - provider: openai
+    model_name: gpt-4o
+    sync_source: openrouter
+    enabled: true
+    tags:
+      - reasoning
+      - coding
+      - chat
+    quality_weight: 1.2
+    notes: "Best all-around model, use for complex tasks"
+
+  - provider: openai
+    model_name: gpt-4o-mini
+    sync_source: openrouter
+    enabled: true
+    tags:
+      - chat
+      - summarization
+    quality_weight: 0.9
+    notes: "Cheap and fast for simple tasks"
+
+  - provider: openai
+    model_name: o1
+    sync_source: openrouter
+    enabled: true
+    tags:
+      - reasoning
+    quality_weight: 1.5
+    notes: "Best for complex reasoning, expensive"
+    override_pricing:
+      # OpenRouter might not have accurate o1 pricing
+      cost_input: 0.015
+      cost_output: 0.060
+
+  # Anthropic Models
+  - provider: anthropic
+    model_name: claude-3-5-sonnet-20241022
+    sync_source: openrouter
+    enabled: true
+    tags:
+      - reasoning
+      - coding
+      - chat
+    quality_weight: 1.3
+    notes: "Excellent coding and reasoning"
+
+  - provider: anthropic
+    model_name: claude-3-5-haiku-20241022
+    sync_source: openrouter
+    enabled: true
+    tags:
+      - chat
+      - summarization
+    quality_weight: 0.8
+    notes: "Fast and cheap for simple tasks"
+
+  # Google Models
+  - provider: google
+    model_name: gemini-1.5-pro
+    sync_source: openrouter
+    enabled: true
+    tags:
+      - reasoning
+      - coding
+      - chat
+    quality_weight: 1.1
+    notes: "Large context window, good for long documents"
+
+  - provider: google
+    model_name: gemini-1.5-flash
+    sync_source: openrouter
+    enabled: true
+    tags:
+      - chat
+      - summarization
+    quality_weight: 0.7
+    notes: "Very cheap, fast inference"
+
+  # Mistral Models
+  - provider: mistral
+    model_name: mistral-large-latest
+    sync_source: openrouter
+    enabled: false
+    tags:
+      - coding
+      - chat
+    quality_weight: 1.0
+    notes: "Good alternative, currently disabled"
+
+  # Meta Models
+  - provider: meta
+    model_name: llama-3.1-405b
+    sync_source: openrouter
+    enabled: false
+    tags:
+      - reasoning
+      - coding
+    quality_weight: 1.0
+    notes: "Open source, expensive to run"
+
+# Global Configuration
+sync_settings:
+  # Automatically sync from OpenRouter daily
+  auto_sync_enabled: true
+  sync_interval_hours: 24
+
+  # Alert thresholds for pricing changes
+  alert_threshold_percent: 10
+
+  # Providers to include in sync
+  included_providers:
+    - openai
+    - anthropic
+    - google
+    - mistral
+    - meta
+    - cohere
+
+  # Skip models with these patterns
+  excluded_patterns:
+    - "test"
+    - "preview"
+    - "alpha"
+    - "beta"
+
+# Routing Preferences
+routing_preferences:
+  # Default priority weights for 'balanced' mode
+  balanced_weights:
+    cost: 0.4
+    latency: 0.3
+    task_match: 0.3
+
+  # Weights when latency_pref = 'fast'
+  fast_weights:
+    cost: 0.3
+    latency: 0.4
+    task_match: 0.3
+
+  # Default fallback model if registry is empty
+  fallback_model:
+    provider: openai
+    model_name: gpt-4o-mini
+
+# Deprecation Management
+deprecation_rules:
+  # Auto-deprecate models not synced in this many days
+  auto_deprecate_after_days: 90
+
+  # Replacement suggestions
+  replacements:
+    - old_model: "gpt-4-turbo"
+      new_model: "gpt-4o"
+      reason: "gpt-4o is faster and cheaper"
+
+    - old_model: "claude-3-opus"
+      new_model: "claude-3-5-sonnet"
+      reason: "Claude 3.5 Sonnet outperforms Opus"
